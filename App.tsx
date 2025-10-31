@@ -12,6 +12,10 @@ import * as db from './lib/database';
 type View = 'rooms' | 'staff' | 'utilities' | 'activities' | 'booking';
 
 const App: React.FC = () => {
+  // Authentication State
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUsername, setCurrentUsername] = useState('');
+  
   const [currentView, setCurrentView] = useState<View>('activities');
   const [currentUserRole, setCurrentUserRole] = useState<Role>(Role.Admin);
   const [loading, setLoading] = useState(true);
@@ -37,10 +41,42 @@ const App: React.FC = () => {
   const [accommodationBookings, setAccommodationBookings] = useState<AccommodationBooking[]>([]);
   const [paymentTypes, setPaymentTypes] = useState<PaymentType[]>([]);
 
-  // Load all data on mount
+  // Check if user is already logged in
   useEffect(() => {
-    loadAllData();
+    const savedRole = localStorage.getItem('userRole') as Role | null;
+    const savedUsername = localStorage.getItem('username');
+    
+    if (savedRole && savedUsername) {
+      setCurrentUserRole(savedRole);
+      setCurrentUsername(savedUsername);
+      setIsAuthenticated(true);
+    } else {
+      setLoading(false);
+    }
   }, []);
+
+  // Load all data when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadAllData();
+    }
+  }, [isAuthenticated]);
+
+  // Handle Login
+  const handleLogin = (role: Role, username: string) => {
+    setCurrentUserRole(role);
+    setCurrentUsername(username);
+    setIsAuthenticated(true);
+  };
+
+  // Handle Logout
+  const handleLogout = () => {
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('username');
+    setIsAuthenticated(false);
+    setCurrentUsername('');
+    setCurrentUserRole(Role.Staff);
+  };
 
   const loadAllData = async () => {
     try {
@@ -113,7 +149,6 @@ const App: React.FC = () => {
       setLoading(false);
     }
   };
-
   // Booking Handler for Activity
   const handleBookActivity = async (activityId: string, staffId: string, numberOfPeople: number, discount: number, extras: Omit<Extra, 'id' | 'commission'>[], paymentMethod: string, bookingDate: string, receiptImage?: string, fuelCost?: number, captainCost?: number, employeeCommission?: number) => {
     const activity = activities.find(a => a.id === activityId);
@@ -828,6 +863,7 @@ const App: React.FC = () => {
 
   // CRUD
 
+
   const TABS: { id: View; label: string }[] = [
     { id: 'rooms', label: 'Rooms & Beds' },
     { id: 'booking', label: 'Booking' },
@@ -877,32 +913,21 @@ const App: React.FC = () => {
                     onAddRecord={handleAddUtilityRecord} 
                     onUpdateRecord={handleUpdateUtilityRecord} 
                     onDeleteRecord={handleDeleteUtilityRecord}
-                    utilityCategories={utilityCategories}
-                    onAddCategory={handleAddUtilityCategory}
-                    onDeleteCategory={handleDeleteUtilityCategory}
                     currentUserRole={currentUserRole}
                  />;
       case 'activities':
           return <ActivitiesManagement 
-                    activities={activities} 
-                    speedBoatTrips={speedBoatTrips} 
+                    activities={activities}
+                    speedBoatTrips={speedBoatTrips}
                     taxiBoatOptions={taxiBoatOptions}
                     extras={extras}
-                    staff={staff} 
-                    bookings={bookings} 
+                    bookings={bookings}
                     externalSales={externalSales}
                     platformPayments={platformPayments}
-                    utilityRecords={utilityRecords}
-                    salaryAdvances={salaryAdvances}
-                    absences={absences}
-                    walkInGuests={walkInGuests}
-                    accommodationBookings={accommodationBookings}
-                    rooms={rooms}
+                    staff={staff}
                     paymentTypes={paymentTypes}
-                    onBookActivity={handleBookActivity} 
-                    onBookSpeedBoat={handleBookSpeedBoatTrip} 
-                    onBookPrivateTour={handleBookPrivateTour}
-                    onBookStandaloneExtra={handleBookStandaloneExtra}
+                    onBookActivity={handleBookActivity}
+                    onBookSpeedBoatTrip={handleBookSpeedBoatTrip}
                     onBookTaxiBoat={handleBookTaxiBoat}
                     onUpdateBooking={handleUpdateBooking}
                     onDeleteBooking={handleDeleteBooking}
@@ -933,6 +958,11 @@ const App: React.FC = () => {
         return null;
     }
   };
+
+  // Show login screen if not authenticated
+  if (!isAuthenticated) {
+    return <Login onLogin={handleLogin} />;
+  }
 
   if (loading) {
     return (
@@ -971,17 +1001,20 @@ const App: React.FC = () => {
             <div className="flex justify-between items-center py-4">
                  <h1 className="text-xl font-bold text-slate-800">Facility Management Dashboard</h1>
                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                        <label htmlFor="role-switcher" className="text-sm font-medium text-slate-600">Viewing as:</label>
-                        <select
-                            id="role-switcher"
-                            value={currentUserRole}
-                            onChange={(e) => setCurrentUserRole(e.target.value as Role)}
-                            className="rounded-md border-slate-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-sm py-1"
+                    <div className="flex items-center space-x-3">
+                        <div className="text-sm text-right">
+                            <div className="text-slate-500">Logged in as</div>
+                            <div className="font-semibold text-slate-800">{currentUsername}</div>
+                        </div>
+                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {currentUserRole}
+                        </span>
+                        <button
+                            onClick={handleLogout}
+                            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
                         >
-                            <option value={Role.Admin}>Admin</option>
-                            <option value={Role.Staff}>Staff</option>
-                        </select>
+                            Logout
+                        </button>
                     </div>
                     <div id="google_translate_element"></div>
                  </div>
