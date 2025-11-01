@@ -15,7 +15,7 @@ const App: React.FC = () => {
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUsername, setCurrentUsername] = useState('');
-  
+
   const [currentView, setCurrentView] = useState<View>('activities');
   const [currentUserRole, setCurrentUserRole] = useState<Role>(Role.Admin);
   const [loading, setLoading] = useState(true);
@@ -55,28 +55,12 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Load all data when authenticated
+  // Load all data only when authenticated
   useEffect(() => {
     if (isAuthenticated) {
       loadAllData();
     }
   }, [isAuthenticated]);
-
-  // Handle Login
-  const handleLogin = (role: Role, username: string) => {
-    setCurrentUserRole(role);
-    setCurrentUsername(username);
-    setIsAuthenticated(true);
-  };
-
-  // Handle Logout
-  const handleLogout = () => {
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('username');
-    setIsAuthenticated(false);
-    setCurrentUsername('');
-    setCurrentUserRole(Role.Staff);
-  };
 
   const loadAllData = async () => {
     try {
@@ -149,6 +133,23 @@ const App: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Handle Login
+  const handleLogin = (role: Role, username: string) => {
+    setCurrentUserRole(role);
+    setCurrentUsername(username);
+    setIsAuthenticated(true);
+  };
+
+  // Handle Logout
+  const handleLogout = () => {
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('username');
+    setIsAuthenticated(false);
+    setCurrentUsername('');
+    setCurrentUserRole(Role.Staff);
+  };
+
   // Booking Handler for Activity
   const handleBookActivity = async (activityId: string, staffId: string, numberOfPeople: number, discount: number, extras: Omit<Extra, 'id' | 'commission'>[], paymentMethod: string, bookingDate: string, receiptImage?: string, fuelCost?: number, captainCost?: number, employeeCommission?: number) => {
     const activity = activities.find(a => a.id === activityId);
@@ -863,7 +864,6 @@ const App: React.FC = () => {
 
   // CRUD
 
-
   const TABS: { id: View; label: string }[] = [
     { id: 'rooms', label: 'Rooms & Beds' },
     { id: 'booking', label: 'Booking' },
@@ -880,11 +880,9 @@ const App: React.FC = () => {
   }, [currentUserRole]);
 
   useEffect(() => {
-      if (visibleTabs && visibleTabs.length > 0) {
-        const isCurrentViewVisible = visibleTabs.some(tab => tab.id === currentView);
-        if (!isCurrentViewVisible) {
-            setCurrentView(visibleTabs[0].id);
-        }
+      const isCurrentViewVisible = visibleTabs.some(tab => tab.id === currentView);
+      if (!isCurrentViewVisible) {
+          setCurrentView(visibleTabs[0].id);
       }
   }, [currentUserRole, currentView, visibleTabs]);
 
@@ -913,21 +911,32 @@ const App: React.FC = () => {
                     onAddRecord={handleAddUtilityRecord} 
                     onUpdateRecord={handleUpdateUtilityRecord} 
                     onDeleteRecord={handleDeleteUtilityRecord}
+                    utilityCategories={utilityCategories}
+                    onAddCategory={handleAddUtilityCategory}
+                    onDeleteCategory={handleDeleteUtilityCategory}
                     currentUserRole={currentUserRole}
                  />;
       case 'activities':
           return <ActivitiesManagement 
-                    activities={activities}
-                    speedBoatTrips={speedBoatTrips}
+                    activities={activities} 
+                    speedBoatTrips={speedBoatTrips} 
                     taxiBoatOptions={taxiBoatOptions}
                     extras={extras}
-                    bookings={bookings}
+                    staff={staff} 
+                    bookings={bookings} 
                     externalSales={externalSales}
                     platformPayments={platformPayments}
-                    staff={staff}
+                    utilityRecords={utilityRecords}
+                    salaryAdvances={salaryAdvances}
+                    absences={absences}
+                    walkInGuests={walkInGuests}
+                    accommodationBookings={accommodationBookings}
+                    rooms={rooms}
                     paymentTypes={paymentTypes}
-                    onBookActivity={handleBookActivity}
-                    onBookSpeedBoatTrip={handleBookSpeedBoatTrip}
+                    onBookActivity={handleBookActivity} 
+                    onBookSpeedBoat={handleBookSpeedBoatTrip} 
+                    onBookPrivateTour={handleBookPrivateTour}
+                    onBookStandaloneExtra={handleBookStandaloneExtra}
                     onBookTaxiBoat={handleBookTaxiBoat}
                     onUpdateBooking={handleUpdateBooking}
                     onDeleteBooking={handleDeleteBooking}
@@ -1020,7 +1029,7 @@ const App: React.FC = () => {
                  </div>
             </div>
             <nav className="flex space-x-2 sm:space-x-4 overflow-x-auto -mb-px" aria-label="Tabs">
-                {visibleTabs && visibleTabs.map(tab => (
+                {visibleTabs.map(tab => (
                     <button key={tab.id} onClick={() => setCurrentView(tab.id)}
                         className={`${
                             currentView === tab.id
