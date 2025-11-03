@@ -11,13 +11,11 @@ export enum TaskStatus {
   Completed = 'Completed',
 }
 
-// Fix: Add BedStatus enum for use in RoomManagement component.
 export enum BedStatus {
     Ready = 'Ready',
     'Needs Cleaning' = 'Needs Cleaning',
 }
 
-// Added Role enum for permission control
 export enum Role {
     Admin = 'Admin',
     Staff = 'Staff',
@@ -34,14 +32,12 @@ export interface PaymentType {
   name: string;
 }
 
-// Fix: Add Bed interface for use in RoomManagement component.
 export interface Bed {
     id: string;
     number: number;
     status: BedStatus;
 }
 
-// Fix: Add Room interface for use in RoomManagement component.
 export interface Room {
     id:string;
     name: string;
@@ -50,18 +46,18 @@ export interface Room {
     beds: Bed[];
 }
 
-// Fix: Add Asset interface for use in AssetManagement component.
 export interface Asset {
   id:string;
   name: string;
   type: string;
   location: string;
-  purchaseDate: string; // YYYY-MM-DD
-  warranty: string; // YYYY-MM-DD
+  purchaseDate: string;
+  warranty: string;
   supplier: string;
   condition: EntityCondition;
 }
 
+// Updated Staff interface with new fields
 export interface Staff {
   id: string;
   name: string;
@@ -69,20 +65,37 @@ export interface Staff {
   salary: number;
   contact: string;
   employeeId: string;
+  phone?: string;
+  thaiId?: string;
+  address?: string;
+  emergencyContact?: string;
+  birthday?: string;
+  idPhotoUrl?: string;
+}
+
+// User interface for login credentials
+export interface User {
+  id: string;
+  username: string;
+  password: string;
+  role: Role;
+  staffId?: string; // Optional link to staff record
+  isActive: boolean;
+  createdAt: string;
 }
 
 export interface Shift {
     id:string;
-    date: string; // YYYY-MM-DD
+    date: string;
     staffName: string;
-    startTime: string; // HH:mm
-    endTime: string; // HH:mm
+    startTime: string;
+    endTime: string;
 }
 
 export interface Task {
   id: string;
   description: string;
-  assignedTo: string; // staff id
+  assignedTo: string;
   dueDate: string;
   status: TaskStatus;
 }
@@ -90,24 +103,24 @@ export interface Task {
 export interface UtilityRecord {
     id: string;
     utilityType: string;
-    date: string; // YYYY-MM-DD
+    date: string;
     cost: number;
-    billImage?: string; // base64 encoded image
+    billImage?: string;
 }
 
 export interface Absence {
   id: string;
-  staffId: string; // The ID of the staff member
-  date: string; // YYYY-MM-DD
-  reason?: string; // Optional reason for absence
+  staffId: string;
+  date: string;
+  reason?: string;
 }
 
 export interface SalaryAdvance {
   id: string;
-  staffId: string; // The ID of the staff member
-  date: string; // YYYY-MM-DD
+  staffId: string;
+  date: string;
   amount: number;
-  reason?: string; // Optional reason for the advance
+  reason?: string;
 }
 
 export interface Activity {
@@ -149,7 +162,7 @@ export interface WalkInGuest {
   guestName: string;
   roomId: string;
   bedNumber?: number;
-  checkInDate: string; // YYYY-MM-DD
+  checkInDate: string;
   numberOfNights: number;
   pricePerNight: number;
   amountPaid: number;
@@ -166,10 +179,10 @@ export interface AccommodationBooking {
   platform: string;
   roomId: string;
   bedNumber?: number;
-  checkInDate: string; // YYYY-MM-DD
+  checkInDate: string;
   numberOfNights: number;
   totalPrice: number;
-  amountPaid: number; // Deposit from platform
+  amountPaid: number;
   status: PaymentStatus;
 }
 
@@ -179,31 +192,31 @@ export interface Booking {
   itemType: 'activity' | 'speedboat' | 'private_tour' | 'extra' | 'taxi_boat';
   itemName: string;
   staffId: string;
-  bookingDate: string; // YYYY-MM-DD
+  bookingDate: string;
   customerPrice: number;
   numberOfPeople: number;
   discount?: number;
   extras?: Omit<Extra, 'id' | 'commission'>[];
   extrasTotal?: number;
   paymentMethod: string;
-  receiptImage?: string; // base64 encoded image
+  receiptImage?: string;
   fuelCost?: number;
   captainCost?: number;
-  itemCost?: number; // Total cost for the hostel (e.g., what to pay the boat company)
+  itemCost?: number;
   employeeCommission?: number;
   hostelCommission?: number;
 }
 
 export interface ExternalSale {
   id: string;
-  date: string; // YYYY-MM-DD
+  date: string;
   amount: number;
   description?: string;
 }
 
 export interface PlatformPayment {
   id: string;
-  date: string; // YYYY-MM-DD
+  date: string;
   platform: string;
   amount: number;
   bookingReference?: string;
