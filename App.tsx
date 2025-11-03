@@ -1,20 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { StaffManagement } from './components/StaffManagement';
+import { UserManagement } from './components/UserManagement';
 import UtilitiesManagement from './components/UtilitiesManagement';
 import RoomManagement from './components/RoomManagement';
 import { ActivitiesManagement } from './components/activities/ActivitiesManagement';
 import WalkInManagement from './components/WalkInManagement';
 import { Login } from './components/Login';
-import type { Staff, Shift, Task, UtilityRecord, Room, Absence, Activity, SpeedBoatTrip, Booking, Extra, SalaryAdvance, TaxiBoatOption, ExternalSale, PlatformPayment, WalkInGuest, AccommodationBooking, PaymentType } from './types';
+import type { Staff, Shift, Task, UtilityRecord, Room, Absence, Activity, SpeedBoatTrip, Booking, Extra, SalaryAdvance, TaxiBoatOption, ExternalSale, PlatformPayment, WalkInGuest, AccommodationBooking, PaymentType, User } from './types';
 import { Role } from './types';
 import * as db from './lib/database';
 
-type View = 'rooms' | 'staff' | 'utilities' | 'activities' | 'booking';
+type View = 'rooms' | 'staff' | 'utilities' | 'activities' | 'booking' | 'users';
 
 const App: React.FC = () => {
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUsername, setCurrentUsername] = useState('');
+  const [currentUserId, setCurrentUserId] = useState('');
 
   const [currentView, setCurrentView] = useState<View>('activities');
   const [currentUserRole, setCurrentUserRole] = useState<Role>(Role.Admin);
@@ -22,6 +24,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // State Management
+  const [users, setUsers] = useState<User[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -45,15 +48,40 @@ const App: React.FC = () => {
   useEffect(() => {
     const savedRole = localStorage.getItem('userRole') as Role | null;
     const savedUsername = localStorage.getItem('username');
+    const savedUserId = localStorage.getItem('userId');
     
-    if (savedRole && savedUsername) {
+    if (savedRole && savedUsername && savedUserId) {
       setCurrentUserRole(savedRole);
       setCurrentUsername(savedUsername);
+      setCurrentUserId(savedUserId);
       setIsAuthenticated(true);
     } else {
+      // Load users even if not authenticated (needed for login)
+      loadUsers();
       setLoading(false);
     }
   }, []);
+
+  // Load users separately for login screen
+  const loadUsers = async () => {
+    try {
+      const usersData = await db.fetchUsers();
+      setUsers(usersData);
+      
+      // If no users exist, create default admin
+      if (usersData.length === 0) {
+        const defaultAdmin = await db.addUser({
+          username: 'admin',
+          password: 'admin123',
+          role: Role.Admin,
+          isActive: true,
+        });
+        setUsers([defaultAdmin]);
+      }
+    } catch (err) {
+      console.error('Error loading users:', err);
+    }
+  };
 
   // Load all data only when authenticated
   useEffect(() => {
@@ -68,6 +96,7 @@ const App: React.FC = () => {
       setError(null);
 
       const [
+        usersData,
         staffData,
         shiftsData,
         tasksData,
@@ -87,6 +116,7 @@ const App: React.FC = () => {
         accommodationBookingsData,
         paymentTypesData,
       ] = await Promise.all([
+        db.fetchUsers(),
         db.fetchStaff(),
         db.fetchShifts(),
         db.fetchTasks(),
@@ -107,6 +137,7 @@ const App: React.FC = () => {
         db.fetchPaymentTypes(),
       ]);
 
+      setUsers(usersData);
       setStaff(staffData);
       setShifts(shiftsData);
       setTasks(tasksData);
@@ -135,9 +166,10 @@ const App: React.FC = () => {
   };
 
   // Handle Login
-  const handleLogin = (role: Role, username: string) => {
+  const handleLogin = (role: Role, username: string, userId: string) => {
     setCurrentUserRole(role);
     setCurrentUsername(username);
+    setCurrentUserId(userId);
     setIsAuthenticated(true);
   };
 
@@ -145,9 +177,61 @@ const App: React.FC = () => {
   const handleLogout = () => {
     localStorage.removeItem('userRole');
     localStorage.removeItem('username');
+    localStorage.removeItem('userId');
     setIsAuthenticated(false);
     setCurrentUsername('');
+    setCurrentUserId('');
     setCurrentUserRole(Role.Staff);
+  };
+
+  // User Management Handlers
+  const handleAddUser = async (userData: Omit<User, 'id' | 'createdAt'>) => {
+    try {
+      const newUser = await db.addUser(userData);
+      setUsers(prev => [...prev, newUser]);
+      alert(`User "${newUser.username}" created successfully!`);
+    } catch (err) {
+      console.error('Error adding user:', err);
+      alert('Failed to add user. Please try again.');
+    }
+  };
+
+  const handleUpdateUser = async (userData: User) => {
+    try {
+      const updatedUser = await db.updateUser(userData);
+      setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+      alert(`User "${updatedUser.username}" updated successfully!`);
+    } catch (err) {
+      console.error('Error updating user:', err);
+      alert('Failed to update user. Please try again.');
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    // Prevent deleting own account
+    if (id === currentUserId) {
+      alert('You cannot delete your own account!');
+      return;
+    }
+
+    // Prevent deleting last admin
+    const user = users.find(u => u.id === id);
+    if (user?.role === Role.Admin) {
+      const adminCount = users.filter(u => u.role === Role.Admin && u.isActive).length;
+      if (adminCount <= 1) {
+        alert('Cannot delete the last active admin user!');
+        return;
+      }
+    }
+
+    try {
+      await db.deleteUser(id);
+      setUsers(prev => prev.filter(u => u.id !== id));
+      alert('User deleted successfully!');
+    } catch (err) {
+      console.error('Error deleting user:', err);
+      alert('Failed to delete user. Please try again.');
+    }
   };
 
   // Booking Handler for Activity
@@ -868,6 +952,7 @@ const App: React.FC = () => {
     { id: 'rooms', label: 'Rooms & Beds' },
     { id: 'booking', label: 'Booking' },
     { id: 'staff', label: 'Staff & HR' },
+    { id: 'users', label: 'User Management' },
     { id: 'utilities', label: 'Utilities' },
     { id: 'activities', label: 'Activities' },
   ];
@@ -905,6 +990,8 @@ const App: React.FC = () => {
                 />;
       case 'staff':
         return currentUserRole === Role.Admin ? <StaffManagement staff={staff} shifts={shifts} tasks={tasks} absences={absences} salaryAdvances={salaryAdvances} bookings={bookings} onAddStaff={handleAddStaff} onUpdateStaff={handleUpdateStaff} onDeleteStaff={handleDeleteStaff} onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onAddAbsence={handleAddAbsence} onUpdateAbsence={handleUpdateAbsence} onDeleteAbsence={handleDeleteAbsence} onAddSalaryAdvance={handleAddSalaryAdvance} onUpdateSalaryAdvance={handleUpdateSalaryAdvance} onDeleteSalaryAdvance={handleDeleteSalaryAdvance} /> : null;
+      case 'users':
+        return currentUserRole === Role.Admin ? <UserManagement users={users} onAddUser={handleAddUser} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} /> : null;
       case 'utilities':
           return <UtilitiesManagement 
                     records={utilityRecords} 
@@ -970,7 +1057,7 @@ const App: React.FC = () => {
 
   // Show login screen if not authenticated
   if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} />;
+    return <Login users={users} onLogin={handleLogin} />;
   }
 
   if (loading) {
