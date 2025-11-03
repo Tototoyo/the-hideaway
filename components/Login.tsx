@@ -1,30 +1,25 @@
 import React, { useState } from 'react';
-import { Role } from '../types';
+import { Role, User } from '../types';
 
 interface LoginProps {
-  onLogin: (role: Role, username: string) => void;
+  users: User[];
+  onLogin: (role: Role, username: string, userId: string) => void;
 }
 
-export const Login: React.FC<LoginProps> = ({ onLogin }) => {
+export const Login: React.FC<LoginProps> = ({ users, onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  // Default credentials (you can change these or move to database)
-  const credentials = {
-    admin: { username: 'admin', password: 'admin123', role: Role.Admin },
-    staff: { username: 'staff', password: 'staff123', role: Role.Staff },
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    // Check credentials
-    const user = Object.values(credentials).find(
-      cred => cred.username === username && cred.password === password
+    // Check credentials against database users
+    const user = users.find(
+      u => u.username === username && u.password === password && u.isActive
     );
 
     setTimeout(() => {
@@ -32,9 +27,15 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         // Store login info in localStorage
         localStorage.setItem('userRole', user.role);
         localStorage.setItem('username', user.username);
-        onLogin(user.role, user.username);
+        localStorage.setItem('userId', user.id);
+        onLogin(user.role, user.username, user.id);
       } else {
-        setError('Invalid username or password');
+        const inactiveUser = users.find(u => u.username === username && u.password === password);
+        if (inactiveUser) {
+          setError('This account has been deactivated. Please contact an administrator.');
+        } else {
+          setError('Invalid username or password');
+        }
       }
       setLoading(false);
     }, 500);
@@ -111,19 +112,9 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         </form>
 
         <div className="mt-8 pt-6 border-t border-slate-200">
-          <p className="text-sm text-slate-600 text-center mb-3">Demo Credentials:</p>
-          <div className="space-y-2 text-xs">
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <p className="font-semibold text-blue-900">👑 Admin Access</p>
-              <p className="text-blue-700 mt-1">Username: <span className="font-mono bg-white px-2 py-1 rounded">admin</span></p>
-              <p className="text-blue-700">Password: <span className="font-mono bg-white px-2 py-1 rounded">admin123</span></p>
-            </div>
-            <div className="bg-green-50 p-3 rounded-lg">
-              <p className="font-semibold text-green-900">👤 Staff Access</p>
-              <p className="text-green-700 mt-1">Username: <span className="font-mono bg-white px-2 py-1 rounded">staff</span></p>
-              <p className="text-green-700">Password: <span className="font-mono bg-white px-2 py-1 rounded">staff123</span></p>
-            </div>
-          </div>
+          <p className="text-sm text-slate-600 text-center">
+            Please contact your administrator if you need login credentials.
+          </p>
         </div>
       </div>
     </div>
