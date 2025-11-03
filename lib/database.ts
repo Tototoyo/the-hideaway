@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient';
 import type { 
   Staff, Room, Bed, Task, Shift, UtilityRecord, Absence, SalaryAdvance,
   Activity, SpeedBoatTrip, TaxiBoatOption, Extra, Booking, 
-  ExternalSale, PlatformPayment, WalkInGuest, AccommodationBooking, PaymentType
+  ExternalSale, PlatformPayment, WalkInGuest, AccommodationBooking, PaymentType, User
 } from '../types';
 
 // Helper to convert snake_case to camelCase
@@ -536,3 +536,34 @@ export const deletePaymentType = async (id: string): Promise<void> => {
   const { error } = await supabase.from('payment_types').delete().eq('id', id);
   if (error) throw error;
 };
+
+// ======================
+// USERS (for login management)
+// ======================
+export const fetchUsers = async (): Promise<import('../types').User[]> => {
+  const { data, error } = await supabase.from('users').select('*').order('username');
+  if (error) throw error;
+  return toCamelCase(data) as import('../types').User[];
+};
+
+export const addUser = async (user: Omit<import('../types').User, 'id' | 'createdAt'>): Promise<import('../types').User> => {
+  const userData = {
+    ...toSnakeCase(user),
+    created_at: new Date().toISOString(),
+  };
+  const { data, error } = await supabase.from('users').insert([userData]).select().single();
+  if (error) throw error;
+  return toCamelCase(data) as import('../types').User;
+};
+
+export const updateUser = async (user: import('../types').User): Promise<import('../types').User> => {
+  const { data, error } = await supabase.from('users').update(toSnakeCase(user)).eq('id', user.id).select().single();
+  if (error) throw error;
+  return toCamelCase(data) as import('../types').User;
+};
+
+export const deleteUser = async (id: string): Promise<void> => {
+  const { error } = await supabase.from('users').delete().eq('id', id);
+  if (error) throw error;
+};
+
